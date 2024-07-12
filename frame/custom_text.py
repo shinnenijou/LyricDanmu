@@ -88,10 +88,7 @@ class CustomTextFrame(wx.Frame):
     def OnSendLrcBtn(self,event):
         parent=self.parent
         if parent.roomid is None:
-            dlg = wx.MessageDialog(None, "未指定直播间", "提示", wx.OK)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
+            parent.roomid = 0
         if not self.NextLyric(None):    return
         pre,suf = "",""
         msg = self.lblLyrics[1-parent.lyric_offset].GetLabel()

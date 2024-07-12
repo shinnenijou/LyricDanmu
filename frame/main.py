@@ -471,7 +471,7 @@ class MainFrame(wx.Frame):
         """显示追帧窗体"""
         if not self.live_chasing:
             if self.roomid is None:
-                return showInfoDialog("未指定直播间", "提示")
+                self.roomid = 0
             dlg = wx.MessageDialog(None, "是否启用直播流追帧服务？", "提示", wx.YES_NO|wx.NO_DEFAULT)
             if dlg.ShowModal()==wx.ID_YES:
                 self.pool.submit(self.RunRoomPlayerChaser,self.roomid,self.loop)
@@ -739,7 +739,7 @@ class MainFrame(wx.Frame):
                 self.btnAutoSend.SetLabel("继续 ▶")
             return
         if self.roomid is None:
-            return showInfoDialog("未指定直播间", "提示")
+            self.roomid = 0
         if not self.NextLyric(None):
             return
         if self.has_trans and self.lyc_mod == 2 and self.llist[self.lid-1][2]!=self.llist[self.lid][2]:
@@ -933,7 +933,7 @@ class MainFrame(wx.Frame):
     def OnSendLrcBtn(self, event):
         if self.init_lock or self.auto_sending: return
         if self.roomid is None:
-            return showInfoDialog("未指定直播间", "提示")
+            self.roomid = 0
         if not self.NextLyric(None):    return
         if self.has_trans and self.lyc_mod == 2 and self.llist[self.lid-1][2]!=self.llist[self.lid][2]:
             self.SendLyric(3)
@@ -1050,7 +1050,7 @@ class MainFrame(wx.Frame):
         if msg == "":
             return
         if self.roomid is None:
-            return showInfoDialog("未指定直播间", "提示")
+            self.roomid = 0
         comment = pre + msg
         if len(comment) > self.max_len*2.5:
             return showInfoDialog("弹幕内容过长", "弹幕发送失败")
@@ -1155,7 +1155,7 @@ class MainFrame(wx.Frame):
             return showInfoDialog("解析错误，请重试", "获取弹幕配置出错")
         return True
 
-    def SendDanmu(self, roomid, msg, src:DanmuSrc, pre, max_len, try_times=SENDDANMU_INITIAL_TRY_TIMES, internalData=None):
+    def SendDanmu(self, roomid, msg:str, src:DanmuSrc, pre, max_len, try_times=SENDDANMU_INITIAL_TRY_TIMES, internalData=None):
         """
         发送弹幕
         :param roomid: 直播间号
@@ -1166,6 +1166,14 @@ class MainFrame(wx.Frame):
         :param try_times: 大于0表示弹幕发送失败后允许重发
         :param internalData: 附加数据（应用内部标记用）
         """
+
+        if msg.find("咪") != -1:
+            _sender_ = "shinnenijou"
+        elif msg.find("铃") != -1:
+            _sender_ = "natsukiken"
+        else:
+            _sender_ = "bot"
+
         if re.match("^…?[\s)）」』】’”\"\'\]][\s\U000E0020-\U000E0029】]*$",msg[len(pre):]):  return True
         origin_msg,remain_msg,succ_send=msg,"",False
         if len(origin_msg)>max_len:
@@ -1185,63 +1193,7 @@ class MainFrame(wx.Frame):
             self.recent_danmu[msg]=0
         try:
             mode = 4 if self.app_bottom_danmu else self.cur_mode # 测试功能：app端显示为底部弹幕
-            data=self.blApi.send_danmu(roomid,msg,mode,number=self.cur_acc)
-            if not self.LoginCheck(data): #用户未登入（cookies无效）
-                self.UpdateRecord(msg,roomid,src,DanmuCode.NOT_LOGIN,internalData=internalData)
-                return False
-            errmsg,code=data["msg"],data["code"]
-            if code==10030: #弹幕发送频率过高
-                if try_times>0:
-                    self.UpdateRecord("",roomid,src,DanmuCode.HIGH_FREQ_RE,False,internalData=internalData)
-                    wx.MilliSleep(self.send_interval_ms)
-                    succ_send=self.SendDanmu(roomid,msg,src,pre,max_len,try_times-2,internalData)
-                else:
-                    self.UpdateRecord(msg,roomid,src,DanmuCode.HIGH_FREQ,internalData=internalData)
-            elif code==10031: #短期内发送了两条内容完全相同的弹幕
-                self.UpdateRecord(msg,roomid,src,DanmuCode.REPEATED,internalData=internalData)
-            elif code==11000: #弹幕被吞了（具体原因未知）
-                if try_times>0:
-                    self.UpdateRecord("",roomid,src,DanmuCode.SWALLOWED_RE,False,internalData=internalData)
-                    wx.MilliSleep(self.send_interval_ms)
-                    succ_send=self.SendDanmu(roomid,origin_msg,src,pre,max_len,try_times-2,internalData)
-                else:
-                    self.UpdateRecord(msg,roomid,src,DanmuCode.SWALLOWED,internalData=internalData)
-            # elif code==-500: ... #弹幕长度超出限制
-            # elif code==-102: ... #本次直播需要购票观看
-            # elif code==-403: ... #当前直播间开启了全体禁言
-            # elif code==1003: ... #在当前直播间被禁言
-            elif code!=0: #其他发送失败情况
-                logDebug(f"[SendDanmu] DATA={str(data)}")
-                self.UpdateRecord(msg,roomid,src,DanmuCode.FAIL,internalData=internalData)
-                self.UpdateRecord(f"({errmsg})",roomid,src,DanmuCode.INFO,False,internalData=internalData)
-            elif errmsg=="": #弹幕成功发送
-                self.UpdateRecord(msg,roomid,src,DanmuCode.SUCCESS,internalData=internalData)
-                succ_send=True
-            elif errmsg in ("f","fire"): #弹幕含有B站通用屏蔽词或特殊房间屏蔽词，或因B站偶尔抽风导致无法发送
-                if self.f_resend and try_times>0 and not self.shield_debug_mode: # 注：屏蔽词调试模式下禁用屏蔽句重发
-                    if self.f_resend_mark:
-                        self.UpdateRecord("",roomid,src,DanmuCode.SHIELDED_RE,False,internalData=internalData)
-                    new_msg=self.anti_shield_ex.deal(origin_msg) if self.f_resend_deal else origin_msg
-                    if new_msg!=origin_msg:
-                        self.LogShielded(msg)
-                    wx.MilliSleep(self.send_interval_ms+30)
-                    succ_send=self.SendDanmu(roomid,new_msg,src,pre,max_len,try_times-2,internalData)
-                else:
-                    self.LogShielded(msg)
-                    self.UpdateRecord(msg,roomid,src,DanmuCode.GLOBAL_SHIELDED,internalData=internalData)
-            elif errmsg=="k": #弹幕含有当前直播间所设置的屏蔽词
-                self.UpdateRecord(msg,roomid,src,DanmuCode.ROOM_SHEILDED,internalData=internalData)
-            elif errmsg=="max limit exceeded": #当前房间弹幕流量过大，导致弹幕发送失败
-                if try_times>0 or (src==DanmuSrc.SPREAD and try_times==0):
-                    self.UpdateRecord("",roomid,src,DanmuCode.MAX_LIMIT_RE,False,internalData=internalData)
-                    wx.MilliSleep(self.send_interval_ms+200)
-                    succ_send=self.SendDanmu(roomid,origin_msg,src,pre,max_len,try_times-1,internalData)
-                else:
-                    self.UpdateRecord(msg,roomid,src,DanmuCode.MAX_LIMIT,internalData=internalData)
-            else:
-                logDebug(f"[SendDanmu] ERRMSG={errmsg}")
-                self.UpdateRecord(msg,roomid,src,DanmuCode.FAIL,internalData=internalData)
-                self.UpdateRecord(f"(具体信息：{errmsg})",roomid,src,DanmuCode.INFO,False,internalData=internalData)
+            self.blApi.send_danmu(_sender_,msg,mode,number=self.cur_acc)
         except requests.exceptions.ConnectionError as e: #网络无连接/远程连接中断
             logDebug(f"[SendDanmu] TYPE={type(e)} DESC={e}")
             if "Connection aborted." in str(e):

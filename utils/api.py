@@ -73,22 +73,22 @@ class BiliLiveAPI(BaseAPI):
         res=self.sessions[number].post(url=url,headers=self.headers,data=data,timeout=timeout)
         return json.loads(res.text)
     
-    def send_danmu(self,roomid,msg,mode=1,number=0,timeout=None) -> dict:
+    def send_danmu(self,sender,msg,mode=1,number=0,timeout=None) -> dict:
         """向直播间发送弹幕"""
-        url="https://api.live.bilibili.com/msg/send"
+        url="https://discord.com/api/webhooks/1261335601005723780/E9dA6EyojXYCblNF9ZMO8BnZP2qMxYwzvvOKuPrj8ql0xHnh4lklQ1pqc8A0JLCPwqRZ"
+
         data={
-            "color": 16777215,
-            "fontsize": 25,
-            "mode": mode,
-            "bubble": 0,
-            "msg": msg,
-            "roomid": roomid,
-            "rnd": self.rnd,
-            "csrf_token": self.csrfs[number],
-            "csrf": self.csrfs[number],
+            "content": msg,
+            "username": sender,
         }
+
+        proxies = {
+            "http": "http://127.0.0.1:7890",
+            "https": "http://127.0.0.1:7890"
+        }
+
         if timeout is None: timeout=self.timeout
-        res=self.sessions[number].post(url=url,headers=self.headers,data=data,timeout=timeout)
+        res=self.sessions[number].post(url=url,headers=self.headers,data=data,timeout=timeout,proxies = proxies)
         return json.loads(res.text)
     
     def get_slient_user_list(self,roomid,number=0,timeout=None):
