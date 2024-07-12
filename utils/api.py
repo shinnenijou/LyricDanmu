@@ -75,7 +75,7 @@ class BiliLiveAPI(BaseAPI):
     
     def send_danmu(self,sender,msg,mode=1,number=0,timeout=None) -> dict:
         """向直播间发送弹幕"""
-        url="https://discord.com/api/webhooks/1261335601005723780/E9dA6EyojXYCblNF9ZMO8BnZP2qMxYwzvvOKuPrj8ql0xHnh4lklQ1pqc8A0JLCPwqRZ"
+        url="https://discord.com/api/webhooks/1261350604392108233/jdXBqa-DKY38FXJg70qWW7dXsFXBV-k7_7z-A13IUVed2rfABg8_H99wXLwAUERgX5Rx"
 
         data={
             "content": msg,
