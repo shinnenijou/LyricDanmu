@@ -1055,7 +1055,14 @@ class MainFrame(wx.Frame):
         if len(comment) > self.max_len*2.5:
             return showInfoDialog("弹幕内容过长", "弹幕发送失败")
         comment = self.AntiShield(comment)
-        suf = "】" if comment.count("【") > comment.count("】") else ""
+
+        if comment.count("「") > 0 and comment.count("「") > comment.count("」"):
+            suf = "」"
+        elif comment.count("【") > 0 and comment.count("【") > comment.count("】"):
+            suf = "】"
+        else:
+            suf = ""
+
         self.AddDanmuToQueue(self.roomid,comment,DanmuSrc.COMMENT,pre,suf)
         self.tcComment.Clear()
         self.tcComment.SetSelection(0,0)
