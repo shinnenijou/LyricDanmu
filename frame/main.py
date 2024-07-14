@@ -1178,15 +1178,14 @@ class MainFrame(wx.Frame):
             _sender_ = "shinnenijou"
         elif msg.find("铃") != -1:
             _sender_ = "natsukiken"
+        elif msg.find("uru") != -1:
+            _sender_ = "skr"
         else:
             _sender_ = "bot"
 
         if re.match("^…?[\s)）」』】’”\"\'\]][\s\U000E0020-\U000E0029】]*$",msg[len(pre):]):  return True
         origin_msg,remain_msg,succ_send=msg,"",False
-        if len(origin_msg)>max_len:
-            cut_idx=self.GetCutIndex(origin_msg,max_len,len(pre))
-            msg=origin_msg[:cut_idx]
-            remain_msg="…"+origin_msg[cut_idx:]
+
         if msg in self.recent_danmu.keys():
             num=self.recent_danmu[msg]
             self.recent_danmu[msg]=num+1
