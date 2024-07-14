@@ -195,6 +195,8 @@ class MainFrame(wx.Frame):
         self.alt_hk_simple = wx.WXK_RIGHT                           # 热键：简版模式(默认Alt+→)
         self.alt_hk_dec_tp = wx.WXK_DOWN                            # 热键：降低窗口不透明度(默认Alt+↓)
         self.alt_hk_inc_tp = wx.WXK_UP                              # 热键：增加窗口不透明度(默认Alt+↑)
+        self.discord_url = ""                                       # discord webhook url
+        self.proxy = ""                                             # 代理服务器
 
     def ShowFrame(self, parent):
         """布局并显示各类窗体控件"""
@@ -1199,7 +1201,7 @@ class MainFrame(wx.Frame):
             self.recent_danmu[msg]=0
         try:
             mode = 4 if self.app_bottom_danmu else self.cur_mode # 测试功能：app端显示为底部弹幕
-            self.blApi.send_danmu(_sender_,msg,mode,number=self.cur_acc)
+            self.blApi.send_danmu(_sender_,msg,mode,number=self.cur_acc, proxy=self.proxy, url=self.discord_url)
         except requests.exceptions.ConnectionError as e: #网络无连接/远程连接中断
             logDebug(f"[SendDanmu] TYPE={type(e)} DESC={e}")
             if "Connection aborted." in str(e):
@@ -1911,6 +1913,10 @@ class MainFrame(wx.Frame):
                         self.spread_logviewer_height = min(3000, max(1, int(v)))
                     elif k == "详细转发日志":
                         self.spread_logviewer_verbose = v.lower()=="true"
+                    elif k == "discordurl":
+                        self.discord_url = v
+                    elif k == "代理服务器":
+                        self.proxy = v
         except Exception:
             return showInfoDialog("读取config.txt失败", "启动出错")
         try:
@@ -2145,6 +2151,8 @@ class MainFrame(wx.Frame):
                 f.write("启用转发日志=%s\n" % self.spread_logviewer_enabled)
                 f.write("转发日志高度=%d\n" % self.spread_logviewer_height)
                 f.write("详细转发日志=%s\n" % self.spread_logviewer_verbose)
+                f.write("DiscordURL=%s\n" % self.discord_url)
+                f.write("代理服务器=%s\n" % self.proxy )
                 f.write(titleLine("弹幕记录配置"))
                 f.write("彩色弹幕记录=%s\n" % self.enable_rich_record)
                 f.write("弹幕记录字号=%d\n" % self.record_fontsize)
